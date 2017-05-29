@@ -26,7 +26,7 @@ extension String {
 
 func *(count: Int, value: String) -> String {
     var value = ""
-    for _ in 0...count {
+    for _ in 0..<count {
         value += " "
     }
     return value
@@ -39,7 +39,8 @@ class SourceEditorCommand: NSObject, XCSourceEditorCommand {
         
         var properties = [(String, String)]() // name, type
         var selectedLines = [String]()
-
+        var lastLineIndex: Int?
+        
         for selection in invocation.buffer.selections {
             let range = selection as! XCSourceTextRange
             let startLine = range.start.line
@@ -53,6 +54,7 @@ class SourceEditorCommand: NSObject, XCSourceEditorCommand {
                 guard text.contains("var") || text.contains("let") else {
                     continue
                 }
+                lastLineIndex = index
                 selectedLines.append(text)
             }
         }
@@ -81,7 +83,7 @@ class SourceEditorCommand: NSObject, XCSourceEditorCommand {
         let outsideIndentation = selectedLines.first!.indentation
         let innerIndentation = outsideIndentation + (buffer.usesTabsForIndentation ? buffer.tabWidth : buffer.indentationWidth) * " "
         
-        var initializer = outsideIndentation + "init("
+        var initializer = "\n" + outsideIndentation + "init("
         for (index, (name, type)) in properties.enumerated() {
             initializer.append("\(name): \(type)")
             
@@ -98,6 +100,10 @@ class SourceEditorCommand: NSObject, XCSourceEditorCommand {
         }
         initializer.append(outsideIndentation + "}\n")
         print(initializer)
+        
+        if let index = lastLineIndex {
+            invocation.buffer.lines.insert(initializer, at: index + 1)
+        }
         
         completionHandler(nil)
     }
